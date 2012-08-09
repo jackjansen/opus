@@ -16,11 +16,16 @@ else
 SILK_SOURCES += $(SILK_SOURCES_FLOAT)
 endif
 
+if OS_WINDOWS
+NO_UNDEFINED = -no-undefined
+endif
+
 include celt_headers.txt
 include silk_headers.txt
 include opus_headers.txt
 
 libopus_la_SOURCES = $(CELT_SOURCES) $(SILK_SOURCES) $(OPUS_SOURCES)
+libopus_la_LDFLAGS = $(NO_UNDEFINED)
 
 pkginclude_HEADERS = include/opus.h include/opus_multistream.h include/opus_types.h include/opus_defines.h
 

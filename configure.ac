@@ -271,6 +271,13 @@ AC_SUBST(SIZE32)
 AM_CONDITIONAL([FIXED_POINT], [test x$ac_enable_fixed = xyes])
 AM_CONDITIONAL([CUSTOM_MODES], [test x$ac_enable_custom_modes = xyes])
 
+os_windows=no
+case "$host" in
+  *-*-mingw*|*-*-cygwin*) os_windows=yes;;
+esac
+AM_CONDITIONAL([OS_WINDOWS], [test x$os_windows = xyes])
+
+
 AC_OUTPUT([Makefile opus.pc opus-uninstalled.pc
            doc/Makefile doc/Doxyfile])
 
