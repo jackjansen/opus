@@ -93,6 +93,12 @@ AC_CACHE_CHECK([for C/C++ restrict keyword], ac_cv_c_restrict,
 
 AC_DEFINE([OPUS_BUILD], [], [This is a build of OPUS])
 
+os_windows=no
+case "$host" in
+  *-*-mingw*|*-*-cygwin*) os_windows=yes;;
+esac
+AM_CONDITIONAL([OS_WINDOWS], [test x$os_windows = xyes])
+
 AC_MSG_CHECKING(for C99 variable-size arrays)
 AC_TRY_COMPILE( [], [static int x; char a[++x]; a[sizeof a - 1] = 0; int N; return a[0];],
 [has_var_arrays=yes;AC_DEFINE([VAR_ARRAYS], [], [Use C99 variable-size arrays])
@@ -214,9 +220,14 @@ CFLAGS="$CFLAGS -fstack-protector-all"
 AC_MSG_CHECKING([if ${CC} supports -fstack-protector-all])
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([char foo;])],
       [ AC_MSG_RESULT([yes])
-        STACK_PROTECTOR="-fstack-protector-all" ],
+        STACK_PROTECTOR="-fstack-protector-all"
+        if test $os_windows = yes; then
+            STACK_PROTECTOR_LDFLAGS="-lssp"
+        fi
+      ],
         AC_MSG_RESULT([no]))
 CFLAGS="$saved_CFLAGS $STACK_PROTECTOR"
+LDFLAGS="$LDFLAGS $STACK_PROTECTOR_LDFLAGS"
 fi
 
 CFLAGS="$CFLAGS -W"
@@ -270,12 +281,6 @@ AC_SUBST(SIZE32)
 
 AM_CONDITIONAL([FIXED_POINT], [test x$ac_enable_fixed = xyes])
 AM_CONDITIONAL([CUSTOM_MODES], [test x$ac_enable_custom_modes = xyes])
-
-os_windows=no
-case "$host" in
-  *-*-mingw*|*-*-cygwin*) os_windows=yes;;
-esac
-AM_CONDITIONAL([OS_WINDOWS], [test x$os_windows = xyes])
 
 
 AC_OUTPUT([Makefile opus.pc opus-uninstalled.pc
