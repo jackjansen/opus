@@ -214,6 +214,7 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([char foo;])],
 CFLAGS="$saved_CFLAGS $SYMBOL_VISIBILITY"
 AC_SUBST(SYMBOL_VISIBILITY)
 
+if test $os_windows != yes; then
 if test $ac_cv_c_compiler_gnu = yes ; then
 saved_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -fstack-protector-all"
@@ -228,6 +229,7 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([char foo;])],
         AC_MSG_RESULT([no]))
 CFLAGS="$saved_CFLAGS $STACK_PROTECTOR"
 LDFLAGS="$LDFLAGS $STACK_PROTECTOR_LDFLAGS"
+fi
 fi
 
 CFLAGS="$CFLAGS -W"
