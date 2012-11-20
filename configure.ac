@@ -7,12 +7,25 @@ AM_CONFIG_HEADER([config.h])
 dnl enable silent rules on automake 1.11 and later
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-OPUS_MAJOR_VERSION=0
-OPUS_MINOR_VERSION=9
-OPUS_MICRO_VERSION=14
-OPUS_EXTRA_VERSION=
+# Read our default version string from version.mk.
+# Please update this file for releases.
+AC_MSG_CHECKING([version.mk])
+MK_VERSION=$(awk 'BEGIN { FS = "=" }
+                  /OPUS_VERSION/ { ver = $2}
+                  END {
+                        gsub(/"/, "", ver);
+                        gsub(/^ /, "", ver);
+                        gsub(/ $/, "", ver);
+                        print ver;
+                  }' $srcdir/version.mk)
+if test -z "$MK_VERSION"; then
+  AC_MSG_RESULT([no])
+else
+  AC_MSG_RESULT([$MK_VERSION])
+  OPUS_VERSION="$MK_VERSION"
+fi
 
-OPUS_VERSION="$OPUS_MAJOR_VERSION.$OPUS_MINOR_VERSION.$OPUS_MICRO_VERSION$OPUS_EXTRA_VERSION"
+# Override with the git version, if available.
 AC_MSG_CHECKING([git revision])
 GIT_VERSION=$(git describe --tags --match 'v*' 2>/dev/null | sed 's/^v//')
 if test -z "$GIT_VERSION"; then
@@ -22,28 +35,37 @@ else
   OPUS_VERSION="$GIT_VERSION"
 fi
 
-LIBOPUS_SUFFIX=0
+# Use 'unknown' if all else fails.
+if test -z "$OPUS_VERSION"; then
+  OPUS_VERSION="unknown"
+fi
 
-OPUS_LT_CURRENT=0
+# For automake.
+PACKAGE=opus
+VERSION=$OPUS_VERSION
+
+# For autoconf
+AC_SUBST(OPUS_VERSION)
+
+# For config.h.
+AC_DEFINE_UNQUOTED([OPUS_VERSION], ["$OPUS_VERSION"],
+                   [Opus library version string])
+
+# For libtool.
+dnl Please update these for releases.
+OPUS_LT_CURRENT=2
 OPUS_LT_REVISION=0
-OPUS_LT_AGE=0
+OPUS_LT_AGE=2
 
 AC_SUBST(OPUS_LT_CURRENT)
 AC_SUBST(OPUS_LT_REVISION)
 AC_SUBST(OPUS_LT_AGE)
-AC_SUBST(LIBOPUS_SUFFIX)
-
-# For automake.
-VERSION=$OPUS_VERSION
-PACKAGE=opus
-
-# For our version string
-AC_SUBST(OPUS_VERSION)
 
 AM_INIT_AUTOMAKE($PACKAGE, $VERSION, no-define)
 AM_MAINTAINER_MODE
 
 AC_CANONICAL_HOST
+AC_MINGW32
 AM_PROG_LIBTOOL
 AM_PROG_CC_C_O
 
@@ -123,12 +145,6 @@ if test x"$fp_libm_not_needed" = xdunno; then
 fi
 AC_SUBST([LIBM])
 
-AC_DEFINE_UNQUOTED(OPUS_VERSION, "${OPUS_VERSION}", [Complete version string])
-AC_DEFINE_UNQUOTED(OPUS_MAJOR_VERSION, ${OPUS_MAJOR_VERSION}, [Version major])
-AC_DEFINE_UNQUOTED(OPUS_MINOR_VERSION, ${OPUS_MINOR_VERSION}, [Version minor])
-AC_DEFINE_UNQUOTED(OPUS_MICRO_VERSION, ${OPUS_MICRO_VERSION}, [Version micro])
-AC_DEFINE_UNQUOTED(OPUS_EXTRA_VERSION, "${OPUS_EXTRA_VERSION}", [Version extra])
-
 has_float_approx=no
 #case "$host_cpu" in
 #i[[3456]]86 | x86_64 | powerpc64 | powerpc32 | ia64)
@@ -137,31 +153,33 @@ has_float_approx=no
 #esac    
 
 ac_enable_fixed="no";
-AC_ARG_ENABLE(fixed-point, [  --enable-fixed-point    compile as fixed-point],
+ac_enable_float="yes";
+AC_ARG_ENABLE(fixed-point, [  --enable-fixed-point       compile without floating point (for machines without a fast enough FPU)],
 [if test "$enableval" = yes; then
   ac_enable_fixed="yes";
-  AC_DEFINE([FIXED_POINT], [1], [Compile as fixed-point])
+  ac_enable_float="no";
+  AC_DEFINE([FIXED_POINT], [1], [Compile as fixed-point (for machines without a fast enough FPU)])
 else
-  AC_DEFINE([FLOATING_POINT], , [Compile as floating-point])
+  AC_DEFINE([FLOATING_POINT], , [Compile as floating-point (for machines with a fast enough FPU)])
 fi],
-AC_DEFINE([FLOATING_POINT], , [Compile as floating-point]))
+AC_DEFINE([FLOATING_POINT], , [Compile as floating-point (for machines with a fast enough FPU)]))
 
 ac_enable_fixed_debug="no"
-AC_ARG_ENABLE(fixed-point-debug, [  --enable-fixed-point-debug  debug fixed-point implementation],
+AC_ARG_ENABLE(fixed-point-debug, [  --enable-fixed-point-debug debug fixed-point implementation],
 [if test "$enableval" = yes; then
   ac_enable_fixed_debug="yes"
   AC_DEFINE([FIXED_DEBUG], , [Debug fixed-point implementation])
 fi])
 
 ac_enable_custom_modes="no"
-AC_ARG_ENABLE(custom-modes, [  --enable-custom-modes        Enable non-Opus modes, like 44.1 kHz and powers of two ],
+AC_ARG_ENABLE(custom-modes, [  --enable-custom-modes      enable non-Opus modes, e.g. 44.1 kHz & 2^n frames],
 [if test "$enableval" = yes; then
   ac_enable_custom_modes="yes"
   AC_DEFINE([CUSTOM_MODES], , [Custom modes])
 fi])
 
 float_approx=$has_float_approx
-AC_ARG_ENABLE(float-approx, [  --enable-float-approx   enable fast approximations for floating point],
+AC_ARG_ENABLE(float-approx, [  --enable-float-approx      enable fast approximations for floating point],
     [ if test "$enableval" = yes; then
     AC_WARN([Floating point approximations are not supported on all platforms.])
     float_approx=yes
@@ -174,14 +192,14 @@ if test "x${float_approx}" = "xyes"; then
 fi
 
 ac_enable_assertions="no"
-AC_ARG_ENABLE(assertions, [  --enable-assertions     enable additional software error checking],
+AC_ARG_ENABLE(assertions, [  --enable-assertions        enable additional software error checking],
 [if test "$enableval" = yes; then
   ac_enable_assertions="yes"
   AC_DEFINE([ENABLE_ASSERTIONS], , [Assertions])
 fi])
 
 ac_enable_fuzzing="no"
-AC_ARG_ENABLE(fuzzing, [  --enable-fuzzing     causes the encoder to make random decisions],
+AC_ARG_ENABLE(fuzzing, [  --enable-fuzzing           causes the encoder to make random decisions],
 [if test "$enableval" = yes; then
   ac_enable_fuzzing="yes"
   AC_DEFINE([FUZZING], , [Fuzzing])
@@ -207,17 +225,6 @@ AC_COMPILE_IFELSE([AC_LANG_SOURCE([char foo;])],
         AC_MSG_RESULT([no]))
 CFLAGS="$saved_CFLAGS $SYMBOL_VISIBILITY"
 AC_SUBST(SYMBOL_VISIBILITY)
-
-if test $ac_cv_c_compiler_gnu = yes ; then
-saved_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -fstack-protector-all"
-AC_MSG_CHECKING([if ${CC} supports -fstack-protector-all])
-AC_COMPILE_IFELSE([AC_LANG_SOURCE([char foo;])],
-      [ AC_MSG_RESULT([yes])
-        STACK_PROTECTOR="-fstack-protector-all" ],
-        AC_MSG_RESULT([no]))
-CFLAGS="$saved_CFLAGS $STACK_PROTECTOR"
-fi
 
 CFLAGS="$CFLAGS -W"
 
@@ -286,8 +293,8 @@ AC_MSG_RESULT([
     
     General configuration:
     
+      Floating point support: ........ ${ac_enable_float}
       Fast float approximations: ..... ${float_approx}
-      Fixed point support: ........... ${ac_enable_fixed}
       Fixed point debugging: ......... ${ac_enable_fixed_debug}
       Custom modes: .................. ${ac_enable_custom_modes}
       Assertion checking: ............ ${ac_enable_assertions}

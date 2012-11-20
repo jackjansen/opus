@@ -12,11 +12,6 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -41,7 +36,9 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#if (!defined WIN32 && !defined _WIN32) || defined(__MINGW32__)
 #include <unistd.h>
+#endif
 #include "opus.h"
 #include "test_opus_common.h"
 
@@ -198,6 +195,23 @@ int test_decoder_code0(int no_fuzz)
    }
    fprintf(stdout,"  dec[all] all 2-byte prefix for length 3 and PLC, all modes (64) OK.\n");
 
+   if(no_fuzz)
+   {
+      fprintf(stdout,"  Skipping many tests which fuzz the decoder as requested.\n");
+      free(decbak);
+      for(t=0;t<5*2;t++)opus_decoder_destroy(dec[t]);
+      printf("  Decoders stopped.\n");
+
+      err=0;
+      for(i=0;i<8*2;i++)err|=outbuf_int[i]!=32749;
+      for(i=MAX_FRAME_SAMP*2;i<(MAX_FRAME_SAMP+8)*2;i++)err|=outbuf[i]!=32749;
+      if(err)test_failed();
+
+      free(outbuf_int);
+      free(packet);
+      return 0;
+   }
+
    {
      /*We only test a subset of the modes here simply because the longer
        durations end up taking a long time.*/
@@ -242,16 +256,6 @@ int test_decoder_code0(int no_fuzz)
       }
       if(dec_final_acc!=lres[mode])test_failed();
       fprintf(stdout,"  dec[%3d] all 3-byte prefix for length 4, mode %2d OK.\n",t,lmodes[mode]);
-   }
-
-   if(no_fuzz)
-   {
-      fprintf(stdout,"  Skipping many tests which fuzz the decoder as requested.\n");
-      for(t=0;t<5*2;t++)opus_decoder_destroy(dec[t]);
-      printf("  Decoders stopped.\n");
-      free(outbuf_int);
-      free(packet);
-      return 0;
    }
 
    skip=fast_rand()%7;
@@ -334,6 +338,7 @@ int test_decoder_code0(int no_fuzz)
       fprintf(stdout,"  dec[%3d] pre-selected random packets OK.\n",t);
    }
 
+   free(decbak);
    for(t=0;t<5*2;t++)opus_decoder_destroy(dec[t]);
    printf("  Decoders stopped.\n");
 
