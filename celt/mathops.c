@@ -18,11 +18,6 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -80,10 +75,15 @@ opus_val32 frac_div32(opus_val32 a, opus_val32 b)
    b = VSHR32(b,shift);
    /* 16-bit reciprocal */
    rcp = ROUND16(celt_rcp(ROUND16(b,16)),3);
-   result = SHL32(MULT16_32_Q15(rcp, a),2);
-   rem = a-MULT32_32_Q31(result, b);
-   result += SHL32(MULT16_32_Q15(rcp, rem),2);
-   return result;
+   result = MULT16_32_Q15(rcp, a);
+   rem = PSHR32(a,2)-MULT32_32_Q31(result, b);
+   result = ADD32(result, SHL32(MULT16_32_Q15(rcp, rem),2));
+   if (result >= 536870912)       /*  2^29 */
+      return 2147483647;          /*  2^31 - 1 */
+   else if (result <= -536870912) /* -2^29 */
+      return -2147483647;         /* -2^31 */
+   else
+      return SHL32(result, 2);
 }
 
 /** Reciprocal sqrt approximation in the range [0.25,1) (Q16 in, Q14 out) */

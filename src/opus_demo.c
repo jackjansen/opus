@@ -13,11 +13,6 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -67,13 +62,6 @@ void print_usage( char* argv[] )
     fprintf(stderr, "-dtx                 : enable SILK DTX\n" );
     fprintf(stderr, "-loss <perc>         : simulate packet loss, in percent (0-100); default: 0\n" );
 }
-
-#ifdef _WIN32
-#   define STR_CASEINSENSITIVE_COMPARE(x, y) _stricmp(x, y)
-#else
-#   include <strings.h>
-#   define STR_CASEINSENSITIVE_COMPARE(x, y) strcasecmp(x, y)
-#endif
 
 static void int_to_char(opus_uint32 i, unsigned char ch[4])
 {
@@ -228,7 +216,7 @@ int main(int argc, char *argv[])
     int packet_loss_perc;
     opus_int32 count=0, count_act=0;
     int k;
-    int skip=0;
+    opus_int32 skip=0;
     int stop=0;
     short *in, *out;
     int application=OPUS_APPLICATION_AUDIO;
@@ -323,11 +311,11 @@ int main(int argc, char *argv[])
 
     while( args < argc - 2 ) {
         /* process command line options */
-        if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-cbr" ) == 0 ) {
+        if( strcmp( argv[ args ], "-cbr" ) == 0 ) {
             check_encoder_option(decode_only, "-cbr");
             use_vbr = 0;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-bandwidth" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-bandwidth" ) == 0 ) {
             check_encoder_option(decode_only, "-bandwidth");
             if (strcmp(argv[ args + 1 ], "NB")==0)
                 bandwidth = OPUS_BANDWIDTH_NARROWBAND;
@@ -346,7 +334,7 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
             }
             args += 2;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-framesize" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-framesize" ) == 0 ) {
             check_encoder_option(decode_only, "-framesize");
             if (strcmp(argv[ args + 1 ], "2.5")==0)
                 frame_size = sampling_rate/400;
@@ -367,80 +355,80 @@ int main(int argc, char *argv[])
                 return EXIT_FAILURE;
             }
             args += 2;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-max_payload" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-max_payload" ) == 0 ) {
             check_encoder_option(decode_only, "-max_payload");
             max_payload_bytes = atoi( argv[ args + 1 ] );
             args += 2;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-complexity" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-complexity" ) == 0 ) {
             check_encoder_option(decode_only, "-complexity");
             complexity = atoi( argv[ args + 1 ] );
             args += 2;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-inbandfec" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-inbandfec" ) == 0 ) {
             use_inbandfec = 1;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-forcemono" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-forcemono" ) == 0 ) {
             check_encoder_option(decode_only, "-forcemono");
             forcechannels = 1;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-cvbr" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-cvbr" ) == 0 ) {
             check_encoder_option(decode_only, "-cvbr");
             cvbr = 1;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-dtx") == 0 ) {
+        } else if( strcmp( argv[ args ], "-dtx") == 0 ) {
             check_encoder_option(decode_only, "-dtx");
             use_dtx = 1;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-loss" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-loss" ) == 0 ) {
             check_decoder_option(encode_only, "-loss");
             packet_loss_perc = atoi( argv[ args + 1 ] );
             args += 2;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-sweep" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-sweep" ) == 0 ) {
             check_encoder_option(decode_only, "-sweep");
             sweep_bps = atoi( argv[ args + 1 ] );
             args += 2;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-random_framesize" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-random_framesize" ) == 0 ) {
             check_encoder_option(decode_only, "-random_framesize");
             random_framesize = 1;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-sweep_max" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-sweep_max" ) == 0 ) {
             check_encoder_option(decode_only, "-sweep_max");
             sweep_max = atoi( argv[ args + 1 ] );
             args += 2;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-random_fec" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-random_fec" ) == 0 ) {
             check_encoder_option(decode_only, "-random_fec");
             random_fec = 1;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-silk8k_test" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-silk8k_test" ) == 0 ) {
             check_encoder_option(decode_only, "-silk8k_test");
             mode_list = silk8_test;
             nb_modes_in_list = 8;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-silk12k_test" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-silk12k_test" ) == 0 ) {
             check_encoder_option(decode_only, "-silk12k_test");
             mode_list = silk12_test;
             nb_modes_in_list = 8;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-silk16k_test" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-silk16k_test" ) == 0 ) {
             check_encoder_option(decode_only, "-silk16k_test");
             mode_list = silk16_test;
             nb_modes_in_list = 8;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-hybrid24k_test" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-hybrid24k_test" ) == 0 ) {
             check_encoder_option(decode_only, "-hybrid24k_test");
             mode_list = hybrid24_test;
             nb_modes_in_list = 4;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-hybrid48k_test" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-hybrid48k_test" ) == 0 ) {
             check_encoder_option(decode_only, "-hybrid48k_test");
             mode_list = hybrid48_test;
             nb_modes_in_list = 4;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-celt_test" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-celt_test" ) == 0 ) {
             check_encoder_option(decode_only, "-celt_test");
             mode_list = celt_test;
             nb_modes_in_list = 32;
             args++;
-        } else if( STR_CASEINSENSITIVE_COMPARE( argv[ args ], "-celt_hq_test" ) == 0 ) {
+        } else if( strcmp( argv[ args ], "-celt_hq_test" ) == 0 ) {
             check_encoder_option(decode_only, "-celt_hq_test");
             mode_list = celt_hq_test;
             nb_modes_in_list = 4;
@@ -510,6 +498,7 @@ int main(int argc, char *argv[])
        opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC(packet_loss_perc));
 
        opus_encoder_ctl(enc, OPUS_GET_LOOKAHEAD(&skip));
+       opus_encoder_ctl(enc, OPUS_SET_LSB_DEPTH(16));
     }
     if (!encode_only)
     {
@@ -775,7 +764,7 @@ int main(int argc, char *argv[])
     }
     fprintf (stderr, "average bitrate:             %7.3f kb/s\n",
                      1e-3*bits*sampling_rate/(frame_size*(double)count));
-    fprintf (stderr, "maximum bitrate:             %7.3f bkp/s\n",
+    fprintf (stderr, "maximum bitrate:             %7.3f kb/s\n",
                      1e-3*bits_max*sampling_rate/frame_size);
     if (!decode_only)
        fprintf (stderr, "active bitrate:              %7.3f kb/s\n",

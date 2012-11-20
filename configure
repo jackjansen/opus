@@ -697,11 +697,10 @@ am__isrc
 INSTALL_DATA
 INSTALL_SCRIPT
 INSTALL_PROGRAM
-OPUS_VERSION
-LIBOPUS_SUFFIX
 OPUS_LT_AGE
 OPUS_LT_REVISION
 OPUS_LT_CURRENT
+OPUS_VERSION
 AM_BACKSLASH
 AM_DEFAULT_VERBOSITY
 AM_DEFAULT_V
@@ -1403,12 +1402,12 @@ Optional Features:
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --enable-fixed-point    compile as fixed-point
-  --enable-fixed-point-debug  debug fixed-point implementation
-  --enable-custom-modes        Enable non-Opus modes, like 44.1 kHz and powers of two
-  --enable-float-approx   enable fast approximations for floating point
-  --enable-assertions     enable additional software error checking
-  --enable-fuzzing     causes the encoder to make random decisions
+  --enable-fixed-point       compile without floating point (for machines without a fast enough FPU)
+  --enable-fixed-point-debug debug fixed-point implementation
+  --enable-custom-modes      enable non-Opus modes, e.g. 44.1 kHz & 2^n frames
+  --enable-float-approx      enable fast approximations for floating point
+  --enable-assertions        enable additional software error checking
+  --enable-fuzzing           causes the encoder to make random decisions
   --disable-doc           Do not build API documentation
 
 Optional Packages:
@@ -2431,12 +2430,28 @@ fi
 AM_BACKSLASH='\'
 
 
-OPUS_MAJOR_VERSION=0
-OPUS_MINOR_VERSION=9
-OPUS_MICRO_VERSION=14
-OPUS_EXTRA_VERSION=
+# Read our default version string from version.mk.
+# Please update this file for releases.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking version.mk" >&5
+$as_echo_n "checking version.mk... " >&6; }
+MK_VERSION=$(awk 'BEGIN { FS = "=" }
+                  /OPUS_VERSION/ { ver = $2}
+                  END {
+                        gsub(/"/, "", ver);
+                        gsub(/^ /, "", ver);
+                        gsub(/ $/, "", ver);
+                        print ver;
+                  }' $srcdir/version.mk)
+if test -z "$MK_VERSION"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $MK_VERSION" >&5
+$as_echo "$MK_VERSION" >&6; }
+  OPUS_VERSION="$MK_VERSION"
+fi
 
-OPUS_VERSION="$OPUS_MAJOR_VERSION.$OPUS_MINOR_VERSION.$OPUS_MICRO_VERSION$OPUS_EXTRA_VERSION"
+# Override with the git version, if available.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking git revision" >&5
 $as_echo_n "checking git revision... " >&6; }
 GIT_VERSION=$(git describe --tags --match 'v*' 2>/dev/null | sed 's/^v//')
@@ -2449,22 +2464,32 @@ $as_echo "$GIT_VERSION" >&6; }
   OPUS_VERSION="$GIT_VERSION"
 fi
 
-LIBOPUS_SUFFIX=0
-
-OPUS_LT_CURRENT=0
-OPUS_LT_REVISION=0
-OPUS_LT_AGE=0
-
-
-
-
-
+# Use 'unknown' if all else fails.
+if test -z "$OPUS_VERSION"; then
+  OPUS_VERSION="unknown"
+fi
 
 # For automake.
-VERSION=$OPUS_VERSION
 PACKAGE=opus
+VERSION=$OPUS_VERSION
 
-# For our version string
+# For autoconf
+
+
+# For config.h.
+
+cat >>confdefs.h <<_ACEOF
+#define OPUS_VERSION "$OPUS_VERSION"
+_ACEOF
+
+
+# For libtool.
+OPUS_LT_CURRENT=2
+OPUS_LT_REVISION=0
+OPUS_LT_AGE=2
+
+
+
 
 
 am__api_version='1.11'
@@ -3059,6 +3084,12 @@ host_os=$*
 IFS=$ac_save_IFS
 case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
+
+
+case $host_os in
+  *mingw32* ) MINGW32=yes;;
+	  * ) MINGW32=no;;
+esac
 
 case `pwd` in
   *\ * | *\	*)
@@ -12380,32 +12411,6 @@ fi
 fi
 
 
-
-cat >>confdefs.h <<_ACEOF
-#define OPUS_VERSION "${OPUS_VERSION}"
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define OPUS_MAJOR_VERSION ${OPUS_MAJOR_VERSION}
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define OPUS_MINOR_VERSION ${OPUS_MINOR_VERSION}
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define OPUS_MICRO_VERSION ${OPUS_MICRO_VERSION}
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define OPUS_EXTRA_VERSION "${OPUS_EXTRA_VERSION}"
-_ACEOF
-
-
 has_float_approx=no
 #case "$host_cpu" in
 #i[[3456]]86 | x86_64 | powerpc64 | powerpc32 | ia64)
@@ -12414,10 +12419,12 @@ has_float_approx=no
 #esac
 
 ac_enable_fixed="no";
+ac_enable_float="yes";
 # Check whether --enable-fixed-point was given.
 if test "${enable_fixed_point+set}" = set; then :
   enableval=$enable_fixed_point; if test "$enableval" = yes; then
   ac_enable_fixed="yes";
+  ac_enable_float="no";
 
 $as_echo "#define FIXED_POINT 1" >>confdefs.h
 
@@ -12578,27 +12585,6 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 CFLAGS="$saved_CFLAGS $SYMBOL_VISIBILITY"
 
-
-if test $ac_cv_c_compiler_gnu = yes ; then
-saved_CFLAGS="$CFLAGS"
-CFLAGS="$CFLAGS -fstack-protector-all"
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if ${CC} supports -fstack-protector-all" >&5
-$as_echo_n "checking if ${CC} supports -fstack-protector-all... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-char foo;
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-        STACK_PROTECTOR="-fstack-protector-all"
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-CFLAGS="$saved_CFLAGS $STACK_PROTECTOR"
-fi
 
 CFLAGS="$CFLAGS -W"
 
@@ -15238,8 +15224,8 @@ fi
 
     General configuration:
 
+      Floating point support: ........ ${ac_enable_float}
       Fast float approximations: ..... ${float_approx}
-      Fixed point support: ........... ${ac_enable_fixed}
       Fixed point debugging: ......... ${ac_enable_fixed_debug}
       Custom modes: .................. ${ac_enable_custom_modes}
       Assertion checking: ............ ${ac_enable_assertions}
@@ -15260,8 +15246,8 @@ $as_echo "
 
     General configuration:
 
+      Floating point support: ........ ${ac_enable_float}
       Fast float approximations: ..... ${float_approx}
-      Fixed point support: ........... ${ac_enable_fixed}
       Fixed point debugging: ......... ${ac_enable_fixed_debug}
       Custom modes: .................. ${ac_enable_custom_modes}
       Assertion checking: ............ ${ac_enable_assertions}

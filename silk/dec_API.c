@@ -151,7 +151,7 @@ opus_int silk_Decode(                                   /* O    Returns error co
     psDec->nChannelsAPI      = decControl->nChannelsAPI;
     psDec->nChannelsInternal = decControl->nChannelsInternal;
 
-    if( decControl->API_sampleRate > MAX_API_FS_KHZ * 1000 || decControl->API_sampleRate < 8000 ) {
+    if( decControl->API_sampleRate > (opus_int32)MAX_API_FS_KHZ * 1000 || decControl->API_sampleRate < 8000 ) {
         ret = SILK_DEC_INVALID_SAMPLING_FREQUENCY;
         return( ret );
     }
@@ -340,6 +340,7 @@ opus_int silk_Decode(                                   /* O    Returns error co
     return ret;
 }
 
+#if 0
 /* Getting table of contents for a packet */
 opus_int silk_get_TOC(
     const opus_uint8                *payload,           /* I    Payload data                                */
@@ -357,7 +358,7 @@ opus_int silk_get_TOC(
         return -1;
     }
 
-    silk_memset( Silk_TOC, 0, sizeof( Silk_TOC ) );
+    silk_memset( Silk_TOC, 0, sizeof( *Silk_TOC ) );
 
     /* For stereo, extract the flags for the mid channel */
     flags = silk_RSHIFT( payload[ 0 ], 7 - nFramesPerPayload ) & ( silk_LSHIFT( 1, nFramesPerPayload + 1 ) - 1 );
@@ -371,3 +372,4 @@ opus_int silk_get_TOC(
 
     return ret;
 }
+#endif

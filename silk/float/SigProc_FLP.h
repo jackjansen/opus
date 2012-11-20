@@ -152,9 +152,6 @@ double silk_energy_FLP(
 #define silk_max_float( a, b )                  (((a) > (b)) ? (a) :  (b))
 #define silk_abs_float( a )                     ((silk_float)fabs(a))
 
-#define silk_LIMIT_float( a, limit1, limit2 )   ((limit1) > (limit2) ? ((a) > (limit1) ? (limit1) : ((a) < (limit2) ? (limit2) : (a))) \
-                                                                     : ((a) > (limit2) ? (limit2) : ((a) < (limit1) ? (limit1) : (a))))
-
 /* sigmoid function */
 static inline silk_float silk_sigmoid( silk_float x )
 {
@@ -194,9 +191,9 @@ static inline void silk_short2float_array(
 }
 
 /* using log2() helps the fixed-point conversion */
-static inline silk_float silk_log2( double x ) 
-{ 
-    return ( silk_float )( 3.32192809488736 * log10( x ) ); 
+static inline silk_float silk_log2( double x )
+{
+    return ( silk_float )( 3.32192809488736 * log10( x ) );
 }
 
 #ifdef  __cplusplus

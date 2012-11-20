@@ -68,11 +68,11 @@ POSSIBILITY OF SUCH DAMAGE.
 #define silk_SMLAWW(a32, b32, c32)       silk_MLA(silk_SMLAWB((a32), (b32), (c32)), (b32), silk_RSHIFT_ROUND((c32), 16))
 
 /* add/subtract with output saturated */
-#define silk_ADD_SAT32(a, b)             ((((a) + (b)) & 0x80000000) == 0 ?                              \
+#define silk_ADD_SAT32(a, b)             ((((opus_uint32)(a) + (opus_uint32)(b)) & 0x80000000) == 0 ?                              \
                                         ((((a) & (b)) & 0x80000000) != 0 ? silk_int32_MIN : (a)+(b)) :   \
                                         ((((a) | (b)) & 0x80000000) == 0 ? silk_int32_MAX : (a)+(b)) )
 
-#define silk_SUB_SAT32(a, b)             ((((a)-(b)) & 0x80000000) == 0 ?                                        \
+#define silk_SUB_SAT32(a, b)             ((((opus_uint32)(a)-(opus_uint32)(b)) & 0x80000000) == 0 ?                                        \
                                         (( (a) & ((b)^0x80000000) & 0x80000000) ? silk_int32_MIN : (a)-(b)) :    \
                                         ((((a)^0x80000000) & (b)  & 0x80000000) ? silk_int32_MAX : (a)-(b)) )
 
@@ -130,7 +130,6 @@ static inline opus_int32 silk_CLZ32(opus_int32 in32)
 #ifndef matrix_c_ptr
 #   define matrix_c_ptr(Matrix_base_adr, row, column, M)    *(Matrix_base_adr + ((row)+(M)*(column)))
 #endif
-#define matrix_c_adr(Matrix_base_adr, row, column, M)        (Matrix_base_adr + ((row)+(M)*(column)))
 
 #endif /* SILK_MACROS_H */
 

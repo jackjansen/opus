@@ -477,7 +477,7 @@ static inline opus_int64 silk_abs_int64(opus_int64 a){
 #undef    silk_abs_int32
 static inline opus_int32 silk_abs_int32(opus_int32 a){
     ops_count += 1;
-    return abs(a);
+    return silk_abs(a);
 }
 
 
@@ -710,7 +710,6 @@ static inline opus_int silk_LIMIT_32(opus_int32 a, opus_int32 limit1, opus_int32
 }
 
 #else
-#define exVarDefine
 #define varDefine
 #define silk_SaveCount()
 

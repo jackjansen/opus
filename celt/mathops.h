@@ -18,11 +18,6 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -129,6 +124,17 @@ static inline opus_val16 celt_maxabs16(opus_val16 *x, int len)
    opus_val16 maxval = 0;
    for (i=0;i<len;i++)
       maxval = MAX16(maxval, ABS16(x[i]));
+   return maxval;
+}
+#endif
+
+#ifndef OVERRIDE_CELT_MAXABS32
+static inline opus_val32 celt_maxabs32(opus_val32 *x, int len)
+{
+   int i;
+   opus_val32 maxval = 0;
+   for (i=0;i<len;i++)
+      maxval = MAX32(maxval, ABS32(x[i]));
    return maxval;
 }
 #endif

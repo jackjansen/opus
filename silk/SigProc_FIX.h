@@ -37,7 +37,6 @@ extern "C"
 
 #define SILK_MAX_ORDER_LPC            16            /* max order of the LPC analysis in schur() and k2a() */
 
-#include <stdlib.h>                                 /* for abs() */
 #include <string.h>                                 /* for memset(), memcpy(), memmove() */
 #include "typedef.h"
 #include "resampler_structs.h"
@@ -141,7 +140,7 @@ opus_int32 silk_LPC_inverse_pred_gain_Q24(          /* O    Returns inverse pred
 
 /* Split signal in two decimated bands using first-order allpass filters */
 void silk_ana_filt_bank_1(
-    const opus_int16            *in,                /* I    Input signal [N]                                            */ 
+    const opus_int16            *in,                /* I    Input signal [N]                                            */
     opus_int32                  *S,                 /* I/O  State vector [2]                                            */
     opus_int16                  *outL,              /* O    Low band [N/2]                                              */
     opus_int16                  *outH,              /* O    High band [N/2]                                             */
@@ -154,18 +153,18 @@ void silk_ana_filt_bank_1(
 
 /* Approximation of 128 * log2() (exact inverse of approx 2^() below) */
 /* Convert input to a log scale    */
-opus_int32 silk_lin2log( 
+opus_int32 silk_lin2log(
     const opus_int32            inLin               /* I  input in linear scale                                         */
 );
 
 /* Approximation of a sigmoid function */
-opus_int silk_sigm_Q15( 
+opus_int silk_sigm_Q15(
     opus_int                    in_Q5               /* I                                                                */
 );
 
 /* Approximation of 2^() (exact inverse of approx log2() above) */
 /* Convert input to a linear scale */
-opus_int32 silk_log2lin( 
+opus_int32 silk_log2lin(
     const opus_int32            inLog_Q7            /* I  input on log scale                                            */
 );
 
@@ -483,8 +482,6 @@ static inline opus_int32 silk_ROR32( opus_int32 a32, opus_int rot )
 #define silk_RSHIFT(a, shift)               silk_RSHIFT32(a, shift)                         /* shift >= 0, shift < 32 */
 
 /* saturates before shifting */
-#define silk_LSHIFT_SAT16(a, shift)         (silk_LSHIFT16( silk_LIMIT( (a), silk_RSHIFT16( silk_int16_MIN, (shift) ), \
-                                                    silk_RSHIFT16( silk_int16_MAX, (shift) ) ), (shift) ))
 #define silk_LSHIFT_SAT32(a, shift)         (silk_LSHIFT32( silk_LIMIT( (a), silk_RSHIFT32( silk_int32_MIN, (shift) ), \
                                                     silk_RSHIFT32( silk_int32_MAX, (shift) ) ), (shift) ))
 
@@ -565,8 +562,6 @@ static inline opus_int64 silk_max_64(opus_int64 a, opus_int64 b)
 #define silk_abs_int64(a)                   (((a) >  0)  ? (a) : -(a))
 
 #define silk_sign(a)                        ((a) > 0 ? 1 : ( (a) < 0 ? -1 : 0 ))
-
-#define silk_sqrt(a)                        (sqrt(a))
 
 /* PSEUDO-RANDOM GENERATOR                                                          */
 /* Make sure to store the result as the seed for the next call (also in between     */

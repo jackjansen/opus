@@ -12,11 +12,6 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -34,6 +29,10 @@
 #include "config.h"
 #endif
 
+#ifndef OPUS_BUILD
+#error "OPUS_BUILD _MUST_ be defined to build Opus and you probably want a decent config.h, see README for more details."
+#endif
+
 #include <stdarg.h>
 #include "celt.h"
 #include "opus.h"
@@ -46,6 +45,7 @@
 #include "os_support.h"
 #include "structs.h"
 #include "define.h"
+#include "mathops.h"
 
 struct OpusDecoder {
    int          celt_dec_offset;
@@ -53,6 +53,7 @@ struct OpusDecoder {
    int          channels;
    opus_int32   Fs;          /** Sampling rate (at the API level) */
    silk_DecControlStruct DecControl;
+   int          decode_gain;
 
    /* Everything beyond this point gets cleared on a reset */
 #define OPUS_DECODER_RESET_START stream_channels
@@ -70,7 +71,7 @@ struct OpusDecoder {
 #ifdef FIXED_POINT
 static inline opus_int16 SAT16(opus_int32 x) {
    return x > 32767 ? 32767 : x < -32768 ? -32768 : (opus_int16)x;
-};
+}
 #endif
 
 
@@ -192,7 +193,7 @@ static int opus_packet_get_mode(const unsigned char *data)
 }
 
 static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
-      int len, opus_val16 *pcm, int frame_size, int decode_fec)
+      opus_int32 len, opus_val16 *pcm, int frame_size, int decode_fec)
 {
    void *silk_dec;
    CELTDecoder *celt_dec;
@@ -223,7 +224,12 @@ static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
    F5 = F10>>1;
    F2_5 = F5>>1;
    if (frame_size < F2_5)
+   {
+      RESTORE_STACK;
       return OPUS_BUFFER_TOO_SMALL;
+   }
+   /* Limit frame_size to avoid excessive stack allocations. */
+   frame_size = IMIN(frame_size, st->Fs/25*3);
    /* Payloads of 1 (2 including ToC) or 0 trigger the PLC/DTX */
    if (len<=1)
    {
@@ -258,7 +264,10 @@ static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
       do {
          int ret = opus_decode_frame(st, NULL, 0, pcm, F20, 0);
          if (ret != F20)
+         {
+            RESTORE_STACK;
             return OPUS_INTERNAL_ERROR;
+         }
          pcm += F20*st->channels;
          nb_samples += F20;
       } while (nb_samples < frame_size);
@@ -446,7 +455,7 @@ static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
          pcm[i] = SAT16(pcm[i] + pcm_silk[i]);
 #else
       for (i=0;i<frame_size*st->channels;i++)
-         pcm[i] = pcm[i] + (opus_val16)((1./32768.)*pcm_silk[i]);
+         pcm[i] = pcm[i] + (opus_val16)((1.f/32768.f)*pcm_silk[i]);
 #endif
    }
 
@@ -498,6 +507,18 @@ static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
       }
    }
 
+   if(st->decode_gain)
+   {
+      opus_val32 gain;
+      gain = celt_exp2(MULT16_16_P15(QCONST16(6.48814081e-4f, 25), st->decode_gain));
+      for (i=0;i<frame_size*st->channels;i++)
+      {
+         opus_val32 x;
+         x = MULT16_32_P16(pcm[i],gain);
+         pcm[i] = SATURATE(x, 32767);
+      }
+   }
+
    if (len <= 1)
       st->rangeFinal = 0;
    else
@@ -510,7 +531,7 @@ static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
 
 }
 
-static int parse_size(const unsigned char *data, int len, short *size)
+static int parse_size(const unsigned char *data, opus_int32 len, short *size)
 {
    if (len<1)
    {
@@ -530,7 +551,7 @@ static int parse_size(const unsigned char *data, int len, short *size)
    }
 }
 
-static int opus_packet_parse_impl(const unsigned char *data, int len,
+static int opus_packet_parse_impl(const unsigned char *data, opus_int32 len,
       int self_delimited, unsigned char *out_toc,
       const unsigned char *frames[48], short size[48], int *payload_offset)
 {
@@ -677,7 +698,7 @@ static int opus_packet_parse_impl(const unsigned char *data, int len,
    return count;
 }
 
-int opus_packet_parse(const unsigned char *data, int len,
+int opus_packet_parse(const unsigned char *data, opus_int32 len,
       unsigned char *out_toc, const unsigned char *frames[48],
       short size[48], int *payload_offset)
 {
@@ -686,7 +707,7 @@ int opus_packet_parse(const unsigned char *data, int len,
 }
 
 int opus_decode_native(OpusDecoder *st, const unsigned char *data,
-      int len, opus_val16 *pcm, int frame_size, int decode_fec,
+      opus_int32 len, opus_val16 *pcm, int frame_size, int decode_fec,
       int self_delimited, int *packet_offset)
 {
    int i, nb_samples;
@@ -737,14 +758,14 @@ int opus_decode_native(OpusDecoder *st, const unsigned char *data,
 #ifdef FIXED_POINT
 
 int opus_decode(OpusDecoder *st, const unsigned char *data,
-      int len, opus_val16 *pcm, int frame_size, int decode_fec)
+      opus_int32 len, opus_val16 *pcm, int frame_size, int decode_fec)
 {
    return opus_decode_native(st, data, len, pcm, frame_size, decode_fec, 0, NULL);
 }
 
 #ifndef DISABLE_FLOAT_API
 int opus_decode_float(OpusDecoder *st, const unsigned char *data,
-      int len, float *pcm, int frame_size, int decode_fec)
+      opus_int32 len, float *pcm, int frame_size, int decode_fec)
 {
    VARDECL(opus_int16, out);
    int ret, i;
@@ -766,13 +787,17 @@ int opus_decode_float(OpusDecoder *st, const unsigned char *data,
 
 #else
 int opus_decode(OpusDecoder *st, const unsigned char *data,
-      int len, opus_int16 *pcm, int frame_size, int decode_fec)
+      opus_int32 len, opus_int16 *pcm, int frame_size, int decode_fec)
 {
    VARDECL(float, out);
    int ret, i;
    ALLOC_STACK;
 
-   if(frame_size<0)return OPUS_BAD_ARG;
+   if(frame_size<0)
+   {
+      RESTORE_STACK;
+      return OPUS_BAD_ARG;
+   }
 
    ALLOC(out, frame_size*st->channels, float);
 
@@ -787,7 +812,7 @@ int opus_decode(OpusDecoder *st, const unsigned char *data,
 }
 
 int opus_decode_float(OpusDecoder *st, const unsigned char *data,
-      int len, opus_val16 *pcm, int frame_size, int decode_fec)
+      opus_int32 len, opus_val16 *pcm, int frame_size, int decode_fec)
 {
    return opus_decode_native(st, data, len, pcm, frame_size, decode_fec, 0, NULL);
 }
@@ -833,9 +858,20 @@ int opus_decoder_ctl(OpusDecoder *st, int request, ...)
       st->frame_size = st->Fs/400;
    }
    break;
+   case OPUS_GET_SAMPLE_RATE_REQUEST:
+   {
+      opus_int32 *value = va_arg(ap, opus_int32*);
+      if (value==NULL)
+      {
+         ret = OPUS_BAD_ARG;
+         break;
+      }
+      *value = st->Fs;
+   }
+   break;
    case OPUS_GET_PITCH_REQUEST:
    {
-      int *value = va_arg(ap, opus_int32*);
+      opus_int32 *value = va_arg(ap, opus_int32*);
       if (value==NULL)
       {
          ret = OPUS_BAD_ARG;
@@ -845,6 +881,28 @@ int opus_decoder_ctl(OpusDecoder *st, int request, ...)
          celt_decoder_ctl(celt_dec, OPUS_GET_PITCH(value));
       else
          *value = st->DecControl.prevPitchLag;
+   }
+   break;
+   case OPUS_GET_GAIN_REQUEST:
+   {
+      opus_int32 *value = va_arg(ap, opus_int32*);
+      if (value==NULL)
+      {
+         ret = OPUS_BAD_ARG;
+         break;
+      }
+      *value = st->decode_gain;
+   }
+   break;
+   case OPUS_SET_GAIN_REQUEST:
+   {
+       opus_int32 value = va_arg(ap, opus_int32);
+       if (value<-32768 || value>32767)
+       {
+          ret = OPUS_BAD_ARG;
+          break;
+       }
+       st->decode_gain = value;
    }
    break;
    default:
@@ -907,7 +965,7 @@ int opus_packet_get_nb_channels(const unsigned char *data)
    return (data[0]&0x4) ? 2 : 1;
 }
 
-int opus_packet_get_nb_frames(const unsigned char packet[], int len)
+int opus_packet_get_nb_frames(const unsigned char packet[], opus_int32 len)
 {
    int count;
    if (len<1)
@@ -924,7 +982,7 @@ int opus_packet_get_nb_frames(const unsigned char packet[], int len)
 }
 
 int opus_decoder_get_nb_samples(const OpusDecoder *dec,
-      const unsigned char packet[], int len)
+      const unsigned char packet[], opus_int32 len)
 {
    int samples;
    int count = opus_packet_get_nb_frames(packet, len);
