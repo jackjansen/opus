@@ -22,7 +22,7 @@ doxygen-build.stamp: Doxyfile $(DOCINPUTS)
 
 install-data-local:
 	for f in `find html -type f \! -name "installdox"`; do	\
-		$(INSTALL_DATA) -D $$f $(DESTDIR)$(docdir)/$$f;	\
+		$(INSTALL_DATA) $$f $(DESTDIR)$(docdir)/$$f;	\
 	done
 
 	$(INSTALL) -d $(DESTDIR)$(mandir)/man3
